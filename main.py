@@ -3,115 +3,97 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# توکن ربات شما
-TOKEN = "8226915169:AAGmGCTWVbRHcseOXawfTp7AfSgluaHSqYY"
+# توکن ربات - از محیط بگیر
+TOKEN = os.environ.get("TOKEN", "8226915169:AAGmGCTWVbRHcseOXawfTp7AfSgluaHSqYY")
 
-# آدرس Webhook که از Railway به دست می‌آید
-RAILWAY_URL = os.environ.get("RAILWAY_STATIC_URL", "https://your-app-name.up.railway.app")
-WEBHOOK_URL = f"https://{RAILWAY_URL}" if RAILWAY_URL else "https://your-app-name.up.railway.app"
-
-# لیست همه ارزهای معروف (می‌تونید بیشتر هم کنید)
-CRYPTO_SYMBOLS = ["BTC", "ETH", "ADA", "BNB", "SOL", "XRP", "DOGE", "DOT", "LINK", "MATIC", "SHIB", "TRX", "AVAX", "UNI", "ATOM"]
-
-# گرفتن قیمت از Binance REST API
+# گرفتن قیمت از Binance
 def get_price(symbol: str):
-    # حذف / از ابتدا و تبدیل به حروف بزرگ
-    clean_symbol = symbol.replace("/", "").upper()
-    
-    # اگه با USDT تموم نشده بود، اضافه کن
-    if not clean_symbol.endswith("USDT"):
-        pair = f"{clean_symbol}USDT"
-    else:
-        pair = clean_symbol
-    
+    pair = f"{symbol.upper()}USDT"
     url = f"https://api.binance.com/api/v3/ticker/price?symbol={pair}"
+    
     try:
         r = requests.get(url, timeout=5)
         data = r.json()
         if "price" in data:
-            return data["price"], clean_symbol
-        return None, None
+            return data["price"]
     except:
-        return None, None
+        return None
+    return None
 
-# وقتی کاربر /start بزنه
+# شروع
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "سلام! به ربات قیمت ارز دیجیتال خوش اومدی 🚀\n\n"
-        "برای دیدن قیمت هر ارز می‌تونی از دستورات زیر استفاده کنی:\n"
-        "/btc - قیمت بیت‌کوین\n"
-        "/eth - قیمت اتریوم\n"
-        "/ada - قیمت کاردانو\n"
-        "/help - راهنما\n\n"
-        "یا هر ارز دیگه‌ای که می‌خوای با /[نماد ارز] امتحان کن"
+        "🚀 به ربات قیمت ارز دیجیتال خوش اومدی!\n\n"
+        "فقط کافیه اسم ارز رو با / بنویسی:\n"
+        "/btc\n/eth\n/ada\n/sol\n/doge\nو ..."
     )
 
-# راهنما
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    symbols_text = "\n".join([f"/{symbol.lower()} - {symbol}" for symbol in CRYPTO_SYMBOLS])
-    await update.message.reply_text(
-        f"ارزهای پشتیبانی شده:\n{symbols_text}\n\n"
-        "یا می‌تونید هر ارز دیگه‌ای که توی بایننس هست رو با /[نماد ارز] امتحان کنید"
-    )
-
-# هندلر عمومی برای همه دستورات
+# هندلر همه دستورات
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     command = update.message.text
     
-    # اگه فقط "/" بود یا دستور start/help بود، نادیده بگیر
-    if command in ["/", "/start", "/help"]:
+    # اگه start بود، نادیده بگیر
+    if command == "/start":
         return
     
-    # استخراج اسم ارز از دستور (حذف /)
+    # استخراج اسم ارز
     symbol = command[1:].upper()
     
-    price, clean_symbol = get_price(symbol)
+    # پیام در حال دریافت
+    msg = await update.message.reply_text("🔄 لطفاً صبر کنید...")
+    
+    # گرفتن قیمت
+    price = get_price(symbol)
     
     if price:
-        # فرمت کردن عدد قیمت
+        # فرمت قیمت
         try:
-            price_float = float(price)
-            if price_float < 0.01:
-                formatted_price = f"{price_float:.8f}"
-            elif price_float < 1:
-                formatted_price = f"{price_float:.4f}"
+            p = float(price)
+            if p < 0.0001:
+                formatted = f"{p:.8f}"
+            elif p < 0.01:
+                formatted = f"{p:.6f}"
+            elif p < 1:
+                formatted = f"{p:.4f}"
             else:
-                formatted_price = f"{price_float:,.2f}"
+                formatted = f"{p:,.2f}"
         except:
-            formatted_price = price
+            formatted = price
         
-        await update.message.reply_text(f"💰 {clean_symbol}/USDT : {formatted_price}$")
+        await msg.edit_text(f"💰 {symbol}/USDT: {formatted}$")
     else:
-        await update.message.reply_text(f"❌ ارز {symbol} پیدا نشد یا خطا در دریافت قیمت")
+        await msg.edit_text(f"❌ ارز {symbol} یافت نشد!")
 
 def main():
+    print("Starting bot...")
+    
+    # ساخت اپلیکیشن
     app = Application.builder().token(TOKEN).build()
-
+    
     # اضافه کردن هندلرها
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    
-    # این هندلر همه دستورات رو می‌گیره (هر چی که با / شروع بشه)
     app.add_handler(MessageHandler(filters.COMMAND, handle_command))
-
-    port = int(os.environ.get("PORT", 8000))
     
-    # برای Railway
-    railway_url = os.environ.get("RAILWAY_URL", "")
+    # راه‌اندازی بر اساس محیط
+    port = int(os.environ.get("PORT", 8080))
+    railway_url = os.environ.get("RAILWAY_STATIC_URL", "")
+    
     if railway_url:
+        # حالت وب‌هوک برای Railway
         webhook_url = f"https://{railway_url}/{TOKEN}"
+        print(f"Webhook URL: {webhook_url}")
+        print(f"Port: {port}")
+        
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=TOKEN,
+            webhook_url=webhook_url,
+        )
     else:
-        webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
-
-    print(f"Starting webhook on port {port}")
-    print(f"Webhook URL: {webhook_url}")
-
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=TOKEN,
-        webhook_url=webhook_url,
-    )
+        # حالت poll برای تست محلی
+        print("Running in polling mode...")
+        app.run_polling()
 
 if __name__ == "__main__":
     main()
