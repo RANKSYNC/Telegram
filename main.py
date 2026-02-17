@@ -3,7 +3,6 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 import asyncio
 import websockets
 import json
-import os
 
 # WebSocket listener function to get the latest price
 async def get_btc_price():
@@ -39,7 +38,7 @@ async def btc(update: Update, context: CallbackContext) -> None:
 
 def main():
     # Set up the Application and Dispatcher with your token
-    application = Application.builder().token("YOUR_BOT_API_KEY").build()
+    application = Application.builder().token("8226915169:AAEZbgAnZkg_iAUbZESDz9hC77WDUkJQh14").build()
 
     # Register the /btc command
     application.add_handler(CommandHandler("btc", btc))
