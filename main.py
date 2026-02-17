@@ -1,58 +1,49 @@
-from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
-import asyncio
-import websockets
-import json
 import os
+import requests
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-# WebSocket listener function to get the latest price for a specific symbol
-async def get_price(symbol: str):
-    uri = f"wss://stream.binance.com:9443/ws/{symbol.lower()}usdt@ticker"  # Modify to match the format of the symbol
+# توکن ربات شما
+TOKEN = "8226915169:AAGmGCTWVbRHcseOXawfTp7AfSgluaHSqYY"
 
+# آدرس Webhook که از Railway یا پلتفرم شما به دست می‌آید
+WEBHOOK_URL = "https://your-app-name.up.railway.app"  # جایگزین با آدرس واقعی اپ شما
+
+# گرفتن قیمت از Binance REST API
+def get_price(symbol: str):
+    url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol.upper()}USDT"
     try:
-        async with websockets.connect(uri) as websocket:
-            while True:
-                message = await websocket.recv()
-                data = json.loads(message)
-                price = data['c']
-                return price
-    except Exception as e:
-        print(f"Error: {e}")  # Log any connection errors
+        r = requests.get(url, timeout=5)
+        data = r.json()
+        return data["price"]
+    except:
         return None
 
-# Telegram bot function to send the specific price based on the command
-async def price(update: Update, context: CallbackContext) -> None:
-    if context.args:
-        symbol = context.args[0].upper()  # Convert symbol to uppercase for consistency
-        if symbol in ['BTC', 'ADA', 'ETH', 'BNB', 'XRP', 'LTC']:  # Add more symbols as needed
-            symbol_name = f"{symbol}USDT"
-            price = await get_price(symbol_name)
-            if price:
-                await update.message.reply_text(f"Price for {symbol_name}: {price} USDT")
-            else:
-                await update.message.reply_text(f"Sorry, I couldn't fetch the price for {symbol_name}.")
-        else:
-            await update.message.reply_text("Invalid symbol. Please use one of the following: BTC, ADA, ETH, BNB, XRP, LTC.")
-    else:
-        await update.message.reply_text("Please provide a symbol (e.g., /price btc).")
+# وقتی کاربر مثل "/btc" یا "/ada" بنویسه
+async def coin_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    command = update.message.text.replace("/", "").upper()
 
-# Set up the bot with the /price command
-async def start(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("Welcome! Type /price <symbol> to get the price of any coin (e.g., /price btc).")
+    price = get_price(command)
+
+    if price:
+        await update.message.reply_text(f"{command}/USDT : {price}$")
+    else:
+        await update.message.reply_text("ارز پیدا نشد ❌")
 
 def main():
-    # Set up the Application and Dispatcher with your token
-    application = Application.builder().token("8226915169:AAGmGCTWVbRHcseOXawfTp7AfSgluaHSqYY").build()
+    app = Application.builder().token(TOKEN).build()
 
-    # Register the /price and /start commands
-    application.add_handler(CommandHandler("price", price))
-    application.add_handler(CommandHandler("start", start))
+    # هندل کردن درخواست های مختلف مانند /btc /ada /eth
+    app.add_handler(CommandHandler(None, coin_price))
 
-    # Set up webhook URL (replace this with your actual domain)
-    application.bot.set_webhook(url="https://yourdomain.com/YOUR_BOT_API_KEY")
+    port = int(os.environ.get("PORT", 8000))
 
-    # Start the bot using webhook
-    application.run_webhook(listen="0.0.0.0", port=int(os.environ.get("PORT", 5000)), url_path="YOUR_BOT_API_KEY", webhook_url="https://yourdomain.com/YOUR_BOT_API_KEY")
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
+    )
 
-if __name__ == '__main__':
-    asyncio.run(main())
+if __name__ == "__main__":
+    main()
