@@ -1,19 +1,36 @@
+import asyncio
+import websockets
+import json
 from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackContext
 
-# توکن ربات خود را وارد کنید
-TOKEN = "YOUR_BOT_TOKEN"  # توکن ربات خود را اینجا وارد کنید
+# WebSocket listener function to get the latest price
+async def get_btc_price():
+    uri = "wss://fstream.binance.com/ws/btcusdt@markPrice"
+    async with websockets.connect(uri) as websocket:
+        while True:
+            message = await websocket.recv()
+            data = json.loads(message)
+            price = data['p']
+            return price
 
-# تابع /start
-async def start(update: Update, context: CallbackContext) -> None:
-    # وقتی کاربر دستور /start را وارد کند، پیام خوشامدگویی ارسال می‌شود
-    await update.message.reply_text('سلام! من ربات هستم.')
+# Telegram bot function to send the BTC price
+def btc(update: Update, context: CallbackContext) -> None:
+    # Get BTC price from WebSocket
+    price = asyncio.run(get_btc_price())
+    update.message.reply_text(f"Current BTC price: {price} USDT")
 
-# ساختن نمونه‌ای از اپلیکیشن
-application = Application.builder().token(TOKEN).build()
+def main():
+    # Set up the Updater and Dispatcher
+    updater = Updater("YOUR_BOT_API_KEY", use_context=True)
+    dispatcher = updater.dispatcher
+    
+    # Register the /btc command
+    dispatcher.add_handler(CommandHandler("btc", btc))
 
-# افزودن CommandHandler برای دستور /start
-application.add_handler(CommandHandler("start", start))
+    # Start the bot
+    updater.start_polling()
+    updater.idle()
 
-# شروع اجرای polling
-application.run_polling()
+if __name__ == '__main__':
+    main()
