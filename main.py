@@ -25,7 +25,7 @@ async def get_btc_price():
 async def btc(update: Update, context: CallbackContext) -> None:
     print("Received /btc command")
     price = await get_btc_price()
-    
+
     print(f"BTC Price to send: {price}")
     
     if price:
@@ -34,7 +34,7 @@ async def btc(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Sorry, I couldn't fetch the BTC price at the moment.")
 
 def main():
-    # Webhook setup (configure properly with your URL)
+    # Set up the Application and Dispatcher with your token
     application = Application.builder().token("YOUR_BOT_API_KEY").build()
 
     # Register the /btc command
