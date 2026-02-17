@@ -9,6 +9,7 @@ async def get_btc_price():
     uri = "wss://fstream.binance.com/ws/btcusdt@markPrice"
     try:
         async with websockets.connect(uri) as websocket:
+            print("Connected to WebSocket")  # Log connection to WebSocket
             while True:
                 message = await websocket.recv()
                 data = json.loads(message)
@@ -23,7 +24,10 @@ async def get_btc_price():
 async def btc(update: Update, context: CallbackContext) -> None:
     print("Received /btc command")  # Log when the command is received
     price = await get_btc_price()
-    await update.message.reply_text(f"Current BTC price: {price} USDT")
+    if price:
+        await update.message.reply_text(f"Current BTC price: {price} USDT")
+    else:
+        await update.message.reply_text("Sorry, I couldn't fetch the BTC price at the moment.")
 
 def main():
     # Set up the Application and Dispatcher with your token
@@ -32,8 +36,8 @@ def main():
     # Register the /btc command
     application.add_handler(CommandHandler("btc", btc))
 
-    # Start the bot
+    # Start the bot (should be awaited properly)
     application.run_polling()
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
