@@ -3,9 +3,8 @@ import requests
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from flask import Flask, request
 import threading
-import json
 
 # تنظیم لاگ
 logging.basicConfig(
@@ -24,7 +23,9 @@ if RAILWAY_URL.startswith("https://"):
 if RAILWAY_URL.startswith("http://"):
     RAILWAY_URL = RAILWAY_URL.replace("http://", "")
 
-WEBHOOK_URL = f"https://{RAILWAY_URL}/webhook"
+# ایجاد Flask app
+flask_app = Flask(__name__)
+bot_app = None
 
 # گرفتن قیمت از Binance
 def get_price(symbol: str):
@@ -61,8 +62,6 @@ def format_price(price_str: str) -> str:
             return f"{price:.4f}"
         elif price < 1:
             return f"{price:.3f}"
-        elif price < 10:
-            return f"{price:.2f}"
         else:
             return f"{price:,.2f}"
     except:
@@ -72,40 +71,29 @@ def format_price(price_str: str) -> str:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🚀 به ربات قیمت ارز دیجیتال خوش اومدی!\n\n"
-        "برای دیدن قیمت، اسم ارز رو با / بزن:\n"
+        "فقط کافیه اسم ارز رو با / بنویسی:\n"
         "/btc - بیت‌کوین\n"
         "/eth - اتریوم\n"
         "/ada - کاردانو\n"
         "/sol - سولانا\n"
-        "/doge - دوج کوین"
+        "/doge - دوج کوین\n\n"
+        "مثال: /btc"
     )
 
-# هندلر help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📚 راهنما:\n"
-        "از دستور /[اسم ارز] استفاده کن\n"
-        "مثال: /btc, /eth, /ada"
-    )
-
-# هندلر ping
-async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🏓 پونگ!")
-
-# هندلر اصلی دستورات
+# هندلر اصلی
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     command = update.message.text
     
-    if command in ["/", "/start", "/help", "/ping"]:
+    if command == "/start":
         return
     
     symbol = command[1:].strip().upper()
     
     if not symbol:
-        await update.message.reply_text("❌ اسم ارز رو وارد کن")
+        await update.message.reply_text("❌ لطفاً اسم ارز رو وارد کن. مثال: /btc")
         return
     
-    msg = await update.message.reply_text(f"🔄 در حال دریافت {symbol}...")
+    msg = await update.message.reply_text(f"🔄 در حال دریافت قیمت {symbol}...")
     
     price, clean_symbol = get_price(symbol)
     
@@ -117,58 +105,61 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.delete()
         await update.message.reply_text(f"❌ ارز {symbol} پیدا نشد!")
 
-# سرور ساده برای Railway
-class WebhookHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b"Bot is running! Use POST for webhook.")
-    
-    def do_POST(self):
-        self.send_response(200)
-        self.end_headers()
-        # اینجا می‌تونی درخواست‌های وب‌هوک رو پردازش کنی
-        self.wfile.write(b"OK")
-    
-    def log_message(self, format, *args):
-        return
+# مسیر اصلی برای چک کردن
+@flask_app.route('/')
+def home():
+    return "ربات فعال است! 🚀"
 
-def run_http_server():
+# مسیر وب‌هوک
+@flask_app.route('/webhook', methods=['POST'])
+def webhook():
+    if bot_app:
+        # پردازش آپدیت
+        update = Update.de_json(request.get_json(force=True), bot_app.bot)
+        bot_app.process_update(update)
+    return "OK", 200
+
+@flask_app.route('/webhook', methods=['GET'])
+def webhook_get():
+    return "وب‌هوک فعال است. از متد POST استفاده کنید."
+
+def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), WebhookHandler)
-    logger.info(f"HTTP Server running on port {port}")
-    server.serve_forever()
+    flask_app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 def main():
+    global bot_app
     logger.info("🚀 راه‌اندازی ربات...")
-    logger.info(f"📍 آدرس وب‌هوک: {WEBHOOK_URL}")
     
-    # راه‌اندازی HTTP server در یک thread جداگانه
-    http_thread = threading.Thread(target=run_http_server, daemon=True)
-    http_thread.start()
+    # ساخت اپلیکیشن تلگرام
+    bot_app = Application.builder().token(TOKEN).build()
     
-    # راه‌اندازی ربات تلگرام
-    app = Application.builder().token(TOKEN).build()
+    # اضافه کردن هندلرها
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(MessageHandler(filters.COMMAND, handle_command))
     
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("ping", ping_command))
-    app.add_handler(MessageHandler(filters.COMMAND, handle_command))
+    # راه‌اندازی Flask در یک thread جداگانه
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
     
-    port = int(os.environ.get("PORT", 8080))
-    
-    logger.info("✅ ربات آماده است!")
+    # آدرس وب‌هوک
+    webhook_url = f"https://{RAILWAY_URL}/webhook"
+    logger.info(f"📍 آدرس وب‌هوک: {webhook_url}")
     
     # ست کردن وب‌هوک
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path="webhook",
-        webhook_url=WEBHOOK_URL,
-        secret_token=None,
-        drop_pending_updates=True,
-    )
+    bot_app.bot.set_webhook(url=webhook_url)
+    logger.info("✅ وب‌هوک ست شد")
+    
+    # نگه داشتن برنامه
+    logger.info("✅ ربات آماده است!")
+    
+    try:
+        # اینجا منتظر می‌مونیم
+        import time
+        while True:
+            time.sleep(10)
+    except KeyboardInterrupt:
+        logger.info("خروج از برنامه...")
 
 if __name__ == "__main__":
     main()
