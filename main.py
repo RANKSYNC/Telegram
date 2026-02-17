@@ -24,6 +24,10 @@ async def get_btc_price():
 async def btc(update: Update, context: CallbackContext) -> None:
     print("Received /btc command")  # Log when the command is received
     price = await get_btc_price()
+    
+    # Log the response
+    print(f"BTC Price to send: {price}")
+    
     if price:
         await update.message.reply_text(f"Current BTC price: {price} USDT")
     else:
@@ -36,7 +40,7 @@ def main():
     # Register the /btc command
     application.add_handler(CommandHandler("btc", btc))
 
-    # Start the bot (should be awaited properly)
+    # Start the bot
     application.run_polling()
 
 if __name__ == '__main__':
