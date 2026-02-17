@@ -3,7 +3,6 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 import asyncio
 import websockets
 import json
-import os
 
 # WebSocket listener function to get the latest price for a specific symbol
 async def get_price(symbol: str):
@@ -22,15 +21,11 @@ async def get_price(symbol: str):
 
 # Telegram bot function to send the specific price based on the command
 async def price(update: Update, context: CallbackContext) -> None:
-    # Check if the user provided a symbol
     if context.args:
         symbol = context.args[0].upper()  # Convert symbol to uppercase for consistency
-        
-        # Check for supported symbols and call get_price
         if symbol in ['BTC', 'ADA', 'ETH', 'BNB', 'XRP', 'LTC']:  # Add more symbols as needed
             symbol_name = f"{symbol}USDT"
             price = await get_price(symbol_name)
-            
             if price:
                 await update.message.reply_text(f"Price for {symbol_name}: {price} USDT")
             else:
@@ -52,7 +47,7 @@ def main():
     application.add_handler(CommandHandler("price", price))
     application.add_handler(CommandHandler("start", start))
 
-    # Start the bot
+    # Start the bot with Polling
     application.run_polling()
 
 if __name__ == '__main__':
