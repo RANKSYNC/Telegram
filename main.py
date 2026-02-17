@@ -34,7 +34,9 @@ def main():
     app = Application.builder().token(TOKEN).build()
 
     # هندل کردن درخواست های مختلف مانند /btc /ada /eth
-    app.add_handler(CommandHandler(None, coin_price))
+    app.add_handler(CommandHandler("btc", coin_price))  # اضافه کردن دستور /btc
+    app.add_handler(CommandHandler("ada", coin_price))  # اضافه کردن دستور /ada
+    app.add_handler(CommandHandler("eth", coin_price))  # اضافه کردن دستور /eth
 
     port = int(os.environ.get("PORT", 8000))
 
