@@ -3,6 +3,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 import asyncio
 import websockets
 import json
+import os
 
 # WebSocket listener function to get the latest price for a specific symbol
 async def get_price(symbol: str):
