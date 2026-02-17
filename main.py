@@ -1,36 +1,37 @@
 import os
-import json
-import websockets
-import asyncio
+import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = os.environ.get("BOT_TOKEN")  # توکن رباتت رو اینجا وارد کن
+# لاگ برای اینکه خطاها تو Railway دیده بشن
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-# اینجا همون WebSocket URL برای قیمت بیت کوین هست
-WEBSOCKET_URL = "wss://fstream.binance.com/ws/btcusdt@markPrice"
+# گرفتن توکن از Variables
+TOKEN = os.getenv("BOT_TOKEN")
 
-# تابع برای دریافت قیمت از WebSocket
-async def get_price():
-    async with websockets.connect(WEBSOCKET_URL) as websocket:
-        while True:
-            response = await websocket.recv()
-            data = json.loads(response)
-            price = data['p']
-            return price
+if not TOKEN:
+    raise ValueError("❌ BOT_TOKEN is not set in environment variables!")
 
-# دستور برای ارسال قیمت به گروه
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.lower()
-    if "بیت کوین" in text:  # اینجا برای "بیت کوین" یا هر ارز دیجیتال دیگه میشه تغییر داد
-        price = await get_price()
-        await update.message.reply_text(f"قیمت بیت کوین: {price} USDT")
+# دستور start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("ربات روشنه ✅🔥")
 
-# ساخت اپلیکیشن و متصل کردن آن به تلگرام
-application = ApplicationBuilder().token(TOKEN).build()
+# دستور help
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("دستور خاصی نداره فعلاً 😎")
 
-# اضافه کردن هَندلر برای پیام‌های گروه
-application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-# شروع ربات
-application.run_polling()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+
+    print("Bot is running...")
+
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
