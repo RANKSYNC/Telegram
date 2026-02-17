@@ -25,13 +25,15 @@ async def btc(update: Update, context: CallbackContext) -> None:
     print("Received /btc command")  # Log when the command is received
     price = await get_btc_price()
     
-    # Log the response
+    # Log the response to ensure that the price is being received
     print(f"BTC Price to send: {price}")
     
     if price:
         await update.message.reply_text(f"Current BTC price: {price} USDT")
+        print("Sent BTC price to Telegram.")  # Log after sending the price
     else:
         await update.message.reply_text("Sorry, I couldn't fetch the BTC price at the moment.")
+        print("Failed to fetch BTC price.")  # Log failure to fetch price
 
 def main():
     # Set up the Application and Dispatcher with your token
