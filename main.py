@@ -45,7 +45,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 def main():
     # Set up the Application and Dispatcher with your token
-    application = Application.builder().token("8226915169:AAGQeH7cTTBQBmMqFsRWAG7nj7BtQCNa2BQ").build()
+    application = Application.builder().token("8226915169:AAGmGCTWVbRHcseOXawfTp7AfSgluaHSqYY").build()
 
     # Register the /price and /start commands
     application.add_handler(CommandHandler("price", price))
