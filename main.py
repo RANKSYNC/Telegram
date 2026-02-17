@@ -1,37 +1,19 @@
-import os
-import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackContext
 
-# لاگ برای اینکه خطاها تو Railway دیده بشن
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# توکن ربات خود را وارد کنید
+TOKEN = "YOUR_BOT_TOKEN"  # توکن ربات خود را اینجا وارد کنید
 
-# گرفتن توکن از Variables
-TOKEN = os.getenv("BOT_TOKEN")
+# تابع /start
+async def start(update: Update, context: CallbackContext) -> None:
+    # وقتی کاربر دستور /start را وارد کند، پیام خوشامدگویی ارسال می‌شود
+    await update.message.reply_text('سلام! من ربات هستم.')
 
-if not TOKEN:
-    raise ValueError("❌ BOT_TOKEN is not set in environment variables!")
+# ساختن نمونه‌ای از اپلیکیشن
+application = Application.builder().token(TOKEN).build()
 
-# دستور start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("ربات روشنه ✅🔥")
+# افزودن CommandHandler برای دستور /start
+application.add_handler(CommandHandler("start", start))
 
-# دستور help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("دستور خاصی نداره فعلاً 😎")
-
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-
-    print("Bot is running...")
-
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+# شروع اجرای polling
+application.run_polling()
