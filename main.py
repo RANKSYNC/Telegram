@@ -3,6 +3,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 import asyncio
 import websockets
 import json
+import os
 
 # WebSocket listener function to get the latest price for a specific symbol
 async def get_price(symbol: str):
@@ -47,8 +48,11 @@ def main():
     application.add_handler(CommandHandler("price", price))
     application.add_handler(CommandHandler("start", start))
 
-    # Start the bot with Polling
-    application.run_polling()
+    # Set up webhook URL (replace this with your actual domain)
+    application.bot.set_webhook(url="https://yourdomain.com/YOUR_BOT_API_KEY")
+
+    # Start the bot using webhook
+    application.run_webhook(listen="0.0.0.0", port=int(os.environ.get("PORT", 5000)), url_path="YOUR_BOT_API_KEY", webhook_url="https://yourdomain.com/YOUR_BOT_API_KEY")
 
 if __name__ == '__main__':
     asyncio.run(main())
