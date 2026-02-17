@@ -24,7 +24,7 @@ async def get_btc_price():
 async def btc(update: Update, context: CallbackContext) -> None:
     print("Received /btc command")  # Log when the command is received
     price = await get_btc_price()
-    
+
     # Log the response to ensure that the price is being received
     print(f"BTC Price to send: {price}")
     
@@ -38,7 +38,7 @@ async def btc(update: Update, context: CallbackContext) -> None:
 
 def main():
     # Set up the Application and Dispatcher with your token
-    application = Application.builder().token("8226915169:AAEZbgAnZkg_iAUbZESDz9hC77WDUkJQh14").build()
+    application = Application.builder().token("8226915169:AAGQeH7cTTBQBmMqFsRWAG7nj7BtQCNa2BQ").build()
 
     # Register the /btc command
     application.add_handler(CommandHandler("btc", btc))
