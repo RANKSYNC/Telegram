@@ -1,6 +1,3 @@
-import asyncio
-import websockets
-import json
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
@@ -22,7 +19,7 @@ def btc(update: Update, context: CallbackContext) -> None:
 
 def main():
     # Set up the Updater and Dispatcher
-    updater = Updater("YOUR_BOT_API_KEY", use_context=True)
+    updater = Updater("YOUR_BOT_API_KEY")
     dispatcher = updater.dispatcher
     
     # Register the /btc command
