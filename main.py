@@ -1,5 +1,8 @@
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, CallbackContext
+import asyncio
+import websockets
+import json
 
 # WebSocket listener function to get the latest price
 async def get_btc_price():
@@ -12,22 +15,20 @@ async def get_btc_price():
             return price
 
 # Telegram bot function to send the BTC price
-def btc(update: Update, context: CallbackContext) -> None:
+async def btc(update: Update, context: CallbackContext) -> None:
     # Get BTC price from WebSocket
-    price = asyncio.run(get_btc_price())
-    update.message.reply_text(f"Current BTC price: {price} USDT")
+    price = await get_btc_price()
+    await update.message.reply_text(f"Current BTC price: {price} USDT")
 
 def main():
-    # Set up the Updater and Dispatcher
-    updater = Updater("YOUR_BOT_API_KEY")
-    dispatcher = updater.dispatcher
-    
+    # Set up the Application and Dispatcher (new method)
+    application = Application.builder().token("YOUR_BOT_API_KEY").build()
+
     # Register the /btc command
-    dispatcher.add_handler(CommandHandler("btc", btc))
+    application.add_handler(CommandHandler("btc", btc))
 
     # Start the bot
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
