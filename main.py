@@ -1,52 +1,55 @@
-import requests
+import json
+from urllib.request import urlopen
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # توکن جدید
 TOKEN = "8226915169:AAHDOx1s4o2kQOh0u_9cUIz5q-zWrMEkv8Y"
 
+def get_binance_price(symbol):
+    try:
+        url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}USDT"
+        response = urlopen(url, timeout=5)
+        data = json.loads(response.read())
+        return float(data['price'])
+    except:
+        return None
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🚀 ربات فعال شد!\n\n"
-        "💰 دستورات:\n"
-        "/btc - قیمت بیت‌کوین\n"
-        "/eth - قیمت اتریوم\n"
-        "/ada - قیمت کاردانو"
+        "✅ ربات فعال شد!\n\n"
+        "دستورات:\n"
+        "/btc - بیت‌کوین\n"
+        "/eth - اتریوم\n"
+        "/doge - دوج کوین"
     )
 
-async def btc(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-        price = float(r.json()['price'])
-        await update.message.reply_text(f"💰 BTC/USDT: {price:,.2f}$")
-    except:
-        await update.message.reply_text("❌ خطا")
-
-async def eth(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT")
-        price = float(r.json()['price'])
-        await update.message.reply_text(f"💰 ETH/USDT: {price:,.2f}$")
-    except:
-        await update.message.reply_text("❌ خطا")
-
-async def ada(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=ADAUSDT")
-        price = float(r.json()['price'])
-        await update.message.reply_text(f"💰 ADA/USDT: {price:,.2f}$")
-    except:
-        await update.message.reply_text("❌ خطا")
+async def price_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    coin = update.message.text[1:].upper()
+    
+    msg = await update.message.reply_text(f"🔄 دریافت {coin}...")
+    
+    price = get_binance_price(coin)
+    
+    if price:
+        if price < 1:
+            text = f"{price:.4f}"
+        else:
+            text = f"{price:,.2f}"
+        await msg.edit_text(f"💰 {coin}/USDT: {text}$")
+    else:
+        await msg.edit_text(f"❌ خطا در دریافت {coin}")
 
 def main():
+    print("🚀 ربات شروع به کار کرد...")
+    
     app = Application.builder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("btc", btc))
-    app.add_handler(CommandHandler("eth", eth))
-    app.add_handler(CommandHandler("ada", ada))
+    app.add_handler(CommandHandler("btc", price_handler))
+    app.add_handler(CommandHandler("eth", price_handler))
+    app.add_handler(CommandHandler("doge", price_handler))
     
-    print("🚀 ربات در حال اجرا...")
     app.run_polling()
 
 if __name__ == "__main__":
