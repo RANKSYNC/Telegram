@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # توکن ربات جدیدت رو اینجا بذار
-TOKEN = "7234567890:AAHd..."  # توکن جدید از BotFather
+TOKEN = "8226915169:AAH6F8009VATxbVNmgAm-78ft4xPCgACjdY"  # توکن جدید از BotFather
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
