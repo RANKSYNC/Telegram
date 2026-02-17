@@ -3,21 +3,34 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# توکن جدیدت رو اینجا بذار
-TOKEN = "توکن جدیدت رو اینجا بذار"
+# توکن ربات جدیدت رو اینجا بذار
+TOKEN = "7234567890:AAHd..."  # توکن جدید از BotFather
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ ربات فعال است!\n\nدستورات:\n/btc - قیمت بیت‌کوین")
+    await update.message.reply_text(
+        "🚀 ربات قیمت بیت‌کوین\n\n"
+        "فقط /btc رو بزن"
+    )
 
 async def btc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        r = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-        price = float(r.json()['price'])
-        await update.message.reply_text(f"💰 BTC/USDT: {price:,.2f}$")
-    except:
-        await update.message.reply_text("❌ خطا!")
+        # ساده ترین درخواست به بایننس
+        url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+        response = requests.get(url)
+        
+        # چک کردن وضعیت
+        if response.status_code == 200:
+            data = response.json()
+            price = float(data['price'])
+            await update.message.reply_text(f"💰 بیت‌کوین: {price:,.2f}$")
+        else:
+            await update.message.reply_text(f"❌ خطا: {response.status_code}")
+            
+    except Exception as e:
+        await update.message.reply_text(f"❌ خطا: {str(e)}")
 
 def main():
+    print("🚀 ربات در حال اجرا...")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("btc", btc))
