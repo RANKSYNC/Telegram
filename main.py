@@ -8,15 +8,20 @@ TOKEN = "8226915169:AAF4cAmZDUlR-PhDKMvI_MERxjA06W5zH3g"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🚀 **ربات قیمت ارز**\n\n"
+        "🚀 ربات قیمت ارز فعال شد!\n\n"
         "دستورات:\n"
-        "/btc - قیمت بیت‌کوین\n"
-        "/eth - قیمت اتریوم\n"
-        "/ada - قیمت کاردانو"
+        "/price btc - قیمت بیت‌کوین\n"
+        "/price eth - قیمت اتریوم\n"
+        "/price ada - قیمت کاردانو"
     )
 
-async def price_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    coin = update.message.text[1:].upper()
+async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # گرفتن اسم ارز از دستور
+    if not context.args:
+        await update.message.reply_text("❌ لطفاً اسم ارز رو وارد کن. مثال: /price btc")
+        return
+    
+    coin = context.args[0].upper()
     
     # پیام انتظار
     msg = await update.message.reply_text(f"🔄 دریافت {coin}...")
@@ -40,8 +45,8 @@ async def price_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await msg.edit_text(f"💰 {coin}/USDT: {text}$")
         else:
             await msg.edit_text(f"❌ {coin} پیدا نشد!")
-    except:
-        await msg.edit_text("❌ خطا در دریافت قیمت")
+    except Exception as e:
+        await msg.edit_text(f"❌ خطا: {str(e)}")
 
 def main():
     print("🚀 ربات شروع به کار کرد...")
@@ -50,9 +55,7 @@ def main():
     
     # اضافه کردن هندلرها
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("btc", price_handler))
-    app.add_handler(CommandHandler("eth", price_handler))
-    app.add_handler(CommandHandler("ada", price_handler))
+    app.add_handler(CommandHandler("price", price))
     
     # شروع ربات
     app.run_polling()
